@@ -1,0 +1,22 @@
+# Dados brutos — reconstruídos com scripts/get_data.py, nunca versionados.
+/data/*
+!/data/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Modelos e artefatos de treino
+*.pt
+*.bin
+*.safetensors
+/runs/
+/checkpoints/
+
+# SO / editor
+.DS_Store
+.vscode/
+.idea/
