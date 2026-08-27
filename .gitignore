@@ -20,3 +20,17 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# FEBRACE — material de inscrição (local, não versionado)
+/febrace/
+
+# uv
+.venv/
+uv.lock
+
+# Credenciais
+.env
+
+# Sessão do Telethon — contém credencial de sessão
+*.session
+*.session-journal
