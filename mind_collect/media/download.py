@@ -18,7 +18,14 @@ from pathlib import Path
 import yt_dlp
 
 # Silencia o yt-dlp: quem reporta progresso é o runner.
-QUIETO = {"quiet": True, "no_warnings": True, "noprogress": True}
+QUIETO = {
+    "quiet": True,
+    "no_warnings": True,
+    "noprogress": True,
+    "socket_timeout": 20,
+    "retries": 1,
+    "fragment_retries": 1,
+}
 
 EXT_AUDIO = {".m4a", ".mp3", ".opus", ".ogg", ".wav", ".aac", ".webm"}
 EXT_VIDEO = {".mp4", ".mkv", ".webm", ".mov"}
@@ -46,7 +53,7 @@ class Peca:
     duracao_seg: float | None = None
     canal: str = ""
     canal_id: str = ""
-    publicado_em: str | None = None   # AAAA-MM-DD
+    publicado_em: str | None = None  # AAAA-MM-DD
     descricao: str = ""
     visualizacoes: int | None = None
     plataforma: str = "youtube"
@@ -70,6 +77,13 @@ def _url(info: dict) -> str:
 
 def _para_peca(info: dict) -> Peca:
     d = info.get("upload_date")  # yt-dlp devolve AAAAMMDD
+    perfil = {
+        "nome": info.get("uploader") or info.get("channel"),
+        "handle": info.get("uploader_id") or info.get("channel_id"),
+        "url": info.get("uploader_url") or info.get("channel_url"),
+        "seguidores": info.get("channel_follower_count"),
+        "verificado": info.get("channel_is_verified"),
+    }
     return Peca(
         id=info.get("id", ""),
         url=_url(info),
@@ -81,7 +95,13 @@ def _para_peca(info: dict) -> Peca:
         descricao=(info.get("description") or "").strip(),
         visualizacoes=info.get("view_count"),
         plataforma=info.get("extractor_key", "youtube").lower(),
-        extra={"like_count": info.get("like_count"), "tags": info.get("tags")},
+        extra={
+            "like_count": info.get("like_count"),
+            "comment_count": info.get("comment_count"),
+            "repost_count": info.get("repost_count"),
+            "tags": info.get("tags"),
+            "perfil_publico": perfil,
+        },
     )
 
 
@@ -136,8 +156,9 @@ def baixar_video(url: str, destino: Path) -> Path | None:
     return _achar(destino, info.get("id", ""), EXT_VIDEO)
 
 
-def keyframes(video: Path, destino: Path, limiar: float = 0.30,
-              maximo: int = 60) -> list[tuple[float, Path]]:
+def keyframes(
+    video: Path, destino: Path, limiar: float = 0.30, maximo: int = 60
+) -> list[tuple[float, Path]]:
     """Extrai frames por mudança de cena, não por amostragem cega.
 
     Propaganda tem corte rápido e cena estável entre cortes, então mudança de
@@ -150,9 +171,22 @@ def keyframes(video: Path, destino: Path, limiar: float = 0.30,
     # que sai o pts_time de cada frame. Com "error" os frames são escritos e os
     # tempos somem — o resultado vinha vazio mesmo com o disco cheio de imagem.
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "info", "-y", "-i", str(video),
-        "-vf", f"select='gt(scene,{limiar})',showinfo,scale=1280:-1",
-        "-fps_mode", "vfr", "-frames:v", str(maximo), "-q:v", "3", str(padrao),
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "info",
+        "-y",
+        "-i",
+        str(video),
+        "-vf",
+        f"select='gt(scene,{limiar})',showinfo,scale=1280:-1",
+        "-fps_mode",
+        "vfr",
+        "-frames:v",
+        str(maximo),
+        "-q:v",
+        "3",
+        str(padrao),
     ]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
     tempos = [float(m) for m in re.findall(r"pts_time:([0-9.]+)", r.stderr)]
@@ -162,4 +196,4 @@ def keyframes(video: Path, destino: Path, limiar: float = 0.30,
     # O frame no disco manda: se o tempo não veio, devolve-se o frame mesmo
     # assim, com tempo nulo, em vez de perder tudo.
     tempos += [None] * (len(achados) - len(tempos))
-    return list(zip(tempos[:len(achados)], achados, strict=True))
+    return list(zip(tempos[: len(achados)], achados, strict=True))

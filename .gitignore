@@ -1,6 +1,14 @@
 # Dados brutos — reconstruídos com scripts/get_data.py, nunca versionados.
 /data/*
 !/data/.gitkeep
+!/data/README.md
+!/data/eleicoes2026/
+/data/eleicoes2026/*
+!/data/eleicoes2026/README.md
+!/data/eleicoes2026/SPEC.md
+
+# Snapshots locais; publicação ocorre apenas em repositório privado separado.
+/dist/
 
 # Python
 __pycache__/
@@ -26,10 +34,10 @@ venv/
 
 # uv
 .venv/
-uv.lock
 
 # Credenciais
 .env
+/.local-state/
 
 # Sessão do Telethon — contém credencial de sessão
 *.session

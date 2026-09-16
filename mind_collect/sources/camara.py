@@ -37,15 +37,20 @@ def deputados(cliente: httpx.Client, legislatura: int | None = None) -> list[dic
             return saida
         saida += dados
         pagina += 1
-        if pagina > 12:   # 513 deputados cabem folgados
+        if pagina > 12:  # 513 deputados cabem folgados
             return saida
 
 
 def discursos(cliente: httpx.Client, id_dep: int, de: str, ate: str) -> list[dict]:
     r = cliente.get(
         f"{API}/deputados/{id_dep}/discursos",
-        params={"dataInicio": de, "dataFim": ate, "itens": 100,
-                "ordem": "DESC", "ordenarPor": "dataHoraInicio"},
+        params={
+            "dataInicio": de,
+            "dataFim": ate,
+            "itens": 100,
+            "ordem": "DESC",
+            "ordenarPor": "dataHoraInicio",
+        },
         timeout=40,
     )
     if r.status_code != 200:
@@ -53,8 +58,9 @@ def discursos(cliente: httpx.Client, id_dep: int, de: str, ate: str) -> list[dic
     return r.json().get("dados", [])
 
 
-def coletar(de: str | None = None, ate: str | None = None,
-            limite_deputados: int | None = None) -> Iterator[Documento]:
+def coletar(
+    de: str | None = None, ate: str | None = None, limite_deputados: int | None = None
+) -> Iterator[Documento]:
     """Discursos na janela. Sem datas, os últimos 30 dias."""
     if not ate:
         ate = date.today().isoformat()
@@ -73,8 +79,10 @@ def coletar(de: str | None = None, ate: str | None = None,
                 quando = d.get("dataHoraInicio") or ""
                 yield Documento(
                     fonte="noticia",
-                    url=(f"https://www.camara.leg.br/deputados/{dep['id']}"
-                         f"/discursos?dataInicio={de}&dataFim={ate}"),
+                    url=(
+                        f"https://www.camara.leg.br/deputados/{dep['id']}"
+                        f"/discursos?dataInicio={de}&dataFim={ate}"
+                    ),
                     titulo=(d.get("sumario") or "").strip()[:200],
                     texto=texto,
                     canal="web",

@@ -15,14 +15,15 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..media.download import Peca, baixar_audio, baixar_video, keyframes, listar
+from ..media.download import Peca, baixar_audio, baixar_video, detalhar, keyframes, listar
 from ..media.ocr import divergente, ler
 from ..media.thumbs import hashes, miniatura
 from ..media.transcribe import texto as texto_transcricao
 from ..media.transcribe import transcrever
+from ..paths import corpus_path
 from ..schema import Documento, Midia
 
-MIDIA = Path("data/eleicoes2026/_midia")
+MIDIA = corpus_path("_midia")
 
 # Inserção é peça de 30 ou 60 segundos; bloco em rede passa de 5 minutos. A
 # fronteira em 150s separa os dois com folga para vinheta e variação de corte.
@@ -32,16 +33,16 @@ LIMITE_INSERCAO_SEG = 150
 @dataclass(frozen=True)
 class Semente:
     chave: str
-    alvo: str          # URL de canal/playlist ou "ytsearch30:termo"
+    alvo: str  # URL de canal/playlist ou "ytsearch30:termo"
     eleicao: str
     limite: int = 30
 
 
 SEMENTES: list[Semente] = [
-    Semente("hgpe-2026-tv",  "ytsearch30:horário eleitoral gratuito 2026 presidente", "2026"),
+    Semente("hgpe-2026-tv", "ytsearch30:horário eleitoral gratuito 2026 presidente", "2026"),
     Semente("hgpe-2026-ins", "ytsearch30:inserção eleitoral 2026", "2026"),
-    Semente("hgpe-2022",     "ytsearch30:horário eleitoral gratuito 2022 presidente", "2022"),
-    Semente("hgpe-2018",     "ytsearch20:horário eleitoral gratuito 2018 presidente", "2018"),
+    Semente("hgpe-2022", "ytsearch30:horário eleitoral gratuito 2022 presidente", "2022"),
+    Semente("hgpe-2018", "ytsearch20:horário eleitoral gratuito 2018 presidente", "2018"),
 ]
 
 POR_CHAVE = {s.chave: s for s in SEMENTES}
@@ -76,8 +77,14 @@ def para_documento(peca: Peca, eleicao: str, transcricao) -> Documento:
     )
 
 
-def frames_de(video: Path, doc_id: str, fala: str, midia: Path,
-              maximo: int = 40) -> list[Midia]:
+def frames_de(
+    video: Path,
+    doc_id: str,
+    fala: str,
+    midia: Path,
+    maximo: int = 40,
+    url_origem: str | None = None,
+) -> list[Midia]:
     """Keyframes, OCR e hash perceptual de uma peça.
 
     Só o que diverge da fala entra: em HGPE boa parte do que o OCR lê é legenda
@@ -91,18 +98,28 @@ def frames_de(video: Path, doc_id: str, fala: str, midia: Path,
             continue
         ph, dh = hashes(frame)
         thumb = miniatura(frame, midia / "thumbs" / f"{frame.stem}.jpg")
-        saida.append(Midia(
-            doc_id=doc_id, tipo="frame", url_origem=str(frame), t_seg=t,
-            phash=ph, dhash=dh,
-            ocr_texto="\n".join(a.texto for a in achados),
-            thumb_path=str(thumb) if thumb else None,
-        ))
+        saida.append(
+            Midia(
+                doc_id=doc_id,
+                tipo="frame",
+                url_origem=url_origem or str(frame),
+                t_seg=t,
+                phash=ph,
+                dhash=dh,
+                ocr_texto="\n".join(a.texto for a in achados),
+                thumb_path=str(thumb) if thumb else None,
+            )
+        )
     return saida
 
 
-def coletar(semente: Semente, ja_tem, midia: Path = MIDIA,
-            transcrever_audio: bool = True,
-            com_frames: bool = False) -> Iterator[tuple[Documento, list[Midia]]]:
+def coletar(
+    semente: Semente,
+    ja_tem,
+    midia: Path = MIDIA,
+    transcrever_audio: bool = True,
+    com_frames: bool = False,
+) -> Iterator[tuple[Documento, list[Midia]]]:
     """Descobre, baixa o áudio e transcreve. Com `com_frames`, também extrai
     keyframes e faz OCR — o que exige baixar o vídeo inteiro, ~150 MB por peça
     contra ~12 MB do áudio.
@@ -114,7 +131,7 @@ def coletar(semente: Semente, ja_tem, midia: Path = MIDIA,
         if not achada.id or ja_tem(achada.id):
             continue
         try:
-            peca = baixar_audio(achada.url, midia)
+            peca = baixar_audio(achada.url, midia) if transcrever_audio else detalhar(achada.url)
         except Exception:
             continue
         segmentos = []
@@ -129,6 +146,11 @@ def coletar(semente: Semente, ja_tem, midia: Path = MIDIA,
         if com_frames:
             with contextlib.suppress(Exception):
                 if v := baixar_video(achada.url, midia):
-                    frames = frames_de(v, doc.doc_id,
-                                       texto_transcricao(segmentos), midia)
+                    frames = frames_de(
+                        v,
+                        doc.doc_id,
+                        texto_transcricao(segmentos),
+                        midia,
+                        url_origem=doc.url,
+                    )
         yield doc, frames

@@ -20,8 +20,7 @@ from ..schema import Documento, eleicao_de
 COLECAO_BRASIL = 34412118
 
 CONSULTA = (
-    "eleições OR eleitoral OR candidato OR campanha OR presidenciável "
-    "OR urna OR TSE OR votação"
+    "eleições OR eleitoral OR candidato OR campanha OR presidenciável OR urna OR TSE OR votação"
 )
 
 
@@ -36,8 +35,13 @@ def _chave() -> str:
     return k
 
 
-def coletar(consulta: str = CONSULTA, de: str | None = None, ate: str | None = None,
-            colecao: int = COLECAO_BRASIL, paginas: int = 20) -> Iterator[Documento]:
+def coletar(
+    consulta: str = CONSULTA,
+    de: str | None = None,
+    ate: str | None = None,
+    colecao: int = COLECAO_BRASIL,
+    paginas: int = 20,
+) -> Iterator[Documento]:
     import mediacloud.api
 
     busca = mediacloud.api.SearchApi(_chave())
@@ -47,8 +51,11 @@ def coletar(consulta: str = CONSULTA, de: str | None = None, ate: str | None = N
     cursor = None
     for _ in range(paginas):
         pagina, cursor = busca.story_list(
-            consulta, start_date=ini, end_date=fim,
-            collection_ids=[colecao], pagination_token=cursor,
+            consulta,
+            start_date=ini,
+            end_date=fim,
+            collection_ids=[colecao],
+            pagination_token=cursor,
         )
         if not pagina:
             return
@@ -61,7 +68,7 @@ def coletar(consulta: str = CONSULTA, de: str | None = None, ate: str | None = N
                 fonte="noticia",
                 url=url,
                 titulo=(m.get("title") or "").strip(),
-                texto="",   # Media Cloud não entrega o corpo — só descoberta
+                texto="",  # Media Cloud não entrega o corpo — só descoberta
                 canal="web",
                 modalidade="texto",
                 eleicao=eleicao_de(data),

@@ -16,12 +16,11 @@ from __future__ import annotations
 import re
 import unicodedata
 from collections.abc import Iterable
-
-from datasketch import MinHash, MinHashLSH
+from typing import Any
 
 NUM_PERM = 128
-LIMIAR_TEXTO = 0.85   # calibrar contra lote conferido à mão antes do corpus todo
-SHINGLE = 5           # palavras por shingle
+LIMIAR_TEXTO = 0.85  # calibrar contra lote conferido à mão antes do corpus todo
+SHINGLE = 5  # palavras por shingle
 
 
 def normalizar(texto: str) -> str:
@@ -36,10 +35,12 @@ def shingles(texto: str, n: int = SHINGLE) -> set[str]:
     palavras = normalizar(texto).split()
     if len(palavras) < n:
         return {" ".join(palavras)} if palavras else set()
-    return {" ".join(palavras[i:i + n]) for i in range(len(palavras) - n + 1)}
+    return {" ".join(palavras[i : i + n]) for i in range(len(palavras) - n + 1)}
 
 
-def assinatura(texto: str, num_perm: int = NUM_PERM) -> MinHash:
+def assinatura(texto: str, num_perm: int = NUM_PERM) -> Any:
+    from datasketch import MinHash
+
     m = MinHash(num_perm=num_perm)
     for s in shingles(texto):
         m.update(s.encode())
@@ -50,6 +51,8 @@ class IndiceTexto:
     """LSH sobre MinHash. Diz se já existe algo quase igual no corpus."""
 
     def __init__(self, limiar: float = LIMIAR_TEXTO, num_perm: int = NUM_PERM):
+        from datasketch import MinHashLSH
+
         self.limiar = limiar
         self.num_perm = num_perm
         self.lsh = MinHashLSH(threshold=limiar, num_perm=num_perm)

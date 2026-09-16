@@ -51,10 +51,7 @@ def _janela_cheia(s: Segmento) -> bool:
     Fala real não se alinha a múltiplo exato de 30 — quando isso acontece, é o
     chunk inteiro devolvido sem transcrição de verdade.
     """
-    return (
-        abs((s.fim_seg - s.inicio_seg) - 30.0) < 0.05
-        and abs(s.inicio_seg % 30.0) < 0.05
-    )
+    return abs((s.fim_seg - s.inicio_seg) - 30.0) < 0.05 and abs(s.inicio_seg % 30.0) < 0.05
 
 
 def _sem_repeticao(segmentos: list[Segmento]) -> list[Segmento]:
@@ -77,8 +74,9 @@ def _sem_repeticao(segmentos: list[Segmento]) -> list[Segmento]:
     return limpos
 
 
-def transcrever(audio: Path, modelo: str = MODELO, idioma: str = "pt",
-                cache: bool = True) -> list[Segmento]:
+def transcrever(
+    audio: Path, modelo: str = MODELO, idioma: str = "pt", cache: bool = True
+) -> list[Segmento]:
     """Transcreve. Reaproveita o resultado em disco se já existir.
 
     Transcrever é caro e determinístico o bastante para valer cache: o .json ao
@@ -91,13 +89,18 @@ def transcrever(audio: Path, modelo: str = MODELO, idioma: str = "pt",
     import mlx_whisper
 
     r = mlx_whisper.transcribe(str(audio), path_or_hf_repo=modelo, language=idioma, **OPCOES)
-    segmentos = _sem_repeticao([
-        Segmento(inicio_seg=round(s["start"], 2), fim_seg=round(s["end"], 2),
-                 texto=s["text"].strip(),
-                 confianca=round(s["avg_logprob"], 3) if "avg_logprob" in s else None)
-        for s in r.get("segments", [])
-        if s.get("text", "").strip()
-    ])
+    segmentos = _sem_repeticao(
+        [
+            Segmento(
+                inicio_seg=round(s["start"], 2),
+                fim_seg=round(s["end"], 2),
+                texto=s["text"].strip(),
+                confianca=round(s["avg_logprob"], 3) if "avg_logprob" in s else None,
+            )
+            for s in r.get("segments", [])
+            if s.get("text", "").strip()
+        ]
+    )
     if cache:
         destino.write_text(json.dumps([s.__dict__ for s in segmentos], ensure_ascii=False))
     return segmentos

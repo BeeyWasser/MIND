@@ -13,18 +13,29 @@ from datetime import UTC, datetime
 
 # De onde veio. Serve para particionar o armazenamento e para filtrar no treino.
 FONTES = {
-    "meta_ads",        # Biblioteca de Anúncios da Meta
-    "hgpe_bloco",      # bloco em rede do horário eleitoral
-    "hgpe_insercao",   # inserção de 30s/60s
-    "youtube",         # vídeo ou comentário
+    "meta_ads",  # Biblioteca de Anúncios da Meta
+    "hgpe_bloco",  # bloco em rede do horário eleitoral
+    "hgpe_insercao",  # inserção de 30s/60s
+    "youtube",  # vídeo ou comentário
     "tiktok",
     "instagram",
+    "facebook",
+    "x",
+    "kwai",
+    "bluesky",
+    "site_candidato",
+    "partido",  # comunicação oficial produzida por partidos
+    "dou",  # Diário Oficial da União via INLABS
     "reddit",
     "telegram",
     "noticia",
-    "checagem",        # agência de fact-checking
-    "tse_decisao",     # decisão de remoção de propaganda
-    "tse_registro",    # candidatura — não é corpus, é vocabulário
+    "checagem",  # agência de fact-checking
+    "tse_decisao",  # decisão de remoção de propaganda
+    "tse_denuncia",  # denúncia no Pardal — não implica irregularidade confirmada
+    "tse_pesquisa",  # pesquisas eleitorais registradas
+    "tse_financas",  # prestação de contas de campanha
+    "tse_proposta",  # planos de governo entregues pelas candidaturas
+    "tse_registro",  # candidatura — não é corpus, é vocabulário
 }
 
 # Se pode ir para treino. A Lupa publica Content-Signal ai-train=no e o Aos Fatos
@@ -82,7 +93,7 @@ class Documento:
     url: str
     texto: str = ""
 
-    canal: str = "web"        # tv | radio | facebook | instagram | youtube | ...
+    canal: str = "web"  # tv | radio | facebook | instagram | youtube | ...
     modalidade: str = "texto"
     eleicao: str | None = None  # 2018 | 2020 | 2022 | 2024 | 2026
     titulo: str = ""
@@ -109,7 +120,9 @@ class Documento:
     rotulo_externo: str | None = None
     fonte_rotulo: str | None = None
 
-    licenca_uso: str = "livre"
+    # Conteúdo público não é sinônimo de licença aberta. O padrão conservador
+    # evita que texto de jornal, post ou vídeo entre em treino por acidente.
+    licenca_uso: str = "referencia"
     robots_ok: bool = True
     url_arquivada: str | None = None
 
@@ -118,6 +131,7 @@ class Documento:
     autor_hash: str | None = None
 
     metadados: dict = field(default_factory=dict)
+    _doc_id: str | None = field(default=None, init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.fonte not in FONTES:
@@ -136,24 +150,29 @@ class Documento:
 
     @property
     def doc_id(self) -> str:
+        if self._doc_id:
+            return self._doc_id
         base = f"{self.fonte}|{self.url}|{self.conteudo}"
         return hashlib.sha256(base.encode()).hexdigest()
 
     @property
     def treinavel(self) -> bool:
-        return self.licenca_uso == "livre"
+        return self.licenca_uso == "livre" and bool(self.conteudo.strip())
 
     def to_json(self) -> str:
         d = asdict(self)
+        d.pop("_doc_id", None)
         d["doc_id"] = self.doc_id
         return json.dumps(d, ensure_ascii=False)
 
     @classmethod
     def from_json(cls, linha: str) -> Documento:
         d = json.loads(linha)
-        d.pop("doc_id", None)
+        doc_id = d.pop("doc_id", None)
         d["transcricao"] = [Segmento(**s) for s in d.get("transcricao", [])]
-        return cls(**d)
+        doc = cls(**d)
+        doc._doc_id = doc_id
+        return doc
 
 
 ANOS_ELEITORAIS = {"2014", "2016", "2018", "2020", "2022", "2024", "2026"}

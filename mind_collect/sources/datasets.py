@@ -24,22 +24,22 @@ from pathlib import Path
 
 import httpx
 
+from ..paths import corpus_path
 from ..schema import Documento, anonimizar, eleicao_de
 
-DIR = Path("data/eleicoes2026/_datasets")
+DIR = corpus_path("_datasets")
 ZENODO = "https://zenodo.org/api/records/{rec}/files/{arq}/content"
-SAL = os.environ.get("MIND_SALT", "mind-dev")   # ver .env.exemplo
 
 
 @dataclass(frozen=True)
 class Fonte:
     chave: str
-    registro: str          # id do registro no Zenodo
+    registro: str  # id do registro no Zenodo
     arquivo: str
-    licenca_dado: str      # licença declarada pelo autor
+    licenca_dado: str  # licença declarada pelo autor
     eleicao: str
     canal: str
-    reidratacao: bool = False   # traz só IDs, precisa buscar o texto depois
+    reidratacao: bool = False  # traz só IDs, precisa buscar o texto depois
     doi: str = ""
 
 
@@ -48,12 +48,26 @@ FONTES: list[Fonte] = [
     # Created_at_convert, author_id e referenced_tweets. Não há texto — é
     # reidratação, e reidratar exige a API do X, que hoje é paga e limitada.
     # Os 201 MB são identificador e timestamp.
-    Fonte("tweets-eleicoes-2022", "11206577", "tweets_eleicoes_2022.zip",
-          "cc-by-4.0", "2022", "twitter", reidratacao=True,
-          doi="10.5281/zenodo.11206577"),
-    Fonte("telegram-bolsonarista-2022", "10287589", "id_chats_agosto_telegram.csv",
-          "cc-by-4.0", "2022", "telegram", reidratacao=True,
-          doi="10.5281/zenodo.10287589"),
+    Fonte(
+        "tweets-eleicoes-2022",
+        "11206577",
+        "tweets_eleicoes_2022.zip",
+        "cc-by-4.0",
+        "2022",
+        "twitter",
+        reidratacao=True,
+        doi="10.5281/zenodo.11206577",
+    ),
+    Fonte(
+        "telegram-bolsonarista-2022",
+        "10287589",
+        "id_chats_agosto_telegram.csv",
+        "cc-by-4.0",
+        "2022",
+        "telegram",
+        reidratacao=True,
+        doi="10.5281/zenodo.10287589",
+    ),
 ]
 
 POR_CHAVE = {f.chave: f for f in FONTES}
@@ -66,8 +80,13 @@ def baixar(fonte: Fonte, destino: Path = DIR) -> Path:
     if caminho.exists() and caminho.stat().st_size > 0:
         return caminho
     url = ZENODO.format(rec=fonte.registro, arq=fonte.arquivo)
-    with httpx.stream("GET", url, timeout=600, follow_redirects=True,
-                      headers={"User-Agent": "MINDResearchBot/0.1"}) as r:
+    with httpx.stream(
+        "GET",
+        url,
+        timeout=600,
+        follow_redirects=True,
+        headers={"User-Agent": "MINDResearchBot/0.1"},
+    ) as r:
         r.raise_for_status()
         with open(caminho, "wb") as f:
             for pedaco in r.iter_bytes(1 << 20):
@@ -140,8 +159,11 @@ def coletar(fonte: Fonte, limite: int | None = None) -> Iterator[Documento]:
         if limite and n > limite:
             return
         yield Documento(
-            fonte="noticia" if fonte.canal == "web" else "telegram"
-            if fonte.canal == "telegram" else "reddit",
+            fonte="noticia"
+            if fonte.canal == "web"
+            else "telegram"
+            if fonte.canal == "telegram"
+            else "reddit",
             url=f"https://doi.org/{fonte.doi}#{n}",
             texto=texto,
             canal=fonte.canal,
@@ -150,7 +172,12 @@ def coletar(fonte: Fonte, limite: int | None = None) -> Iterator[Documento]:
             veiculado_em=data,
             # Opinião política é dado sensível pela LGPD: o identificador do
             # autor nunca entra em claro.
-            autor_hash=anonimizar(autor, SAL) if autor else None,
-            metadados={"dataset": fonte.chave, "doi": fonte.doi,
-                       "licenca_dado": fonte.licenca_dado},
+            autor_hash=anonimizar(autor, os.environ.get("MIND_SALT", "mind-dev"))
+            if autor
+            else None,
+            metadados={
+                "dataset": fonte.chave,
+                "doi": fonte.doi,
+                "licenca_dado": fonte.licenca_dado,
+            },
         )

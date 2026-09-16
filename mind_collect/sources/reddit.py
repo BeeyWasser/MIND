@@ -25,7 +25,6 @@ from ..schema import Documento, anonimizar, eleicao_de
 
 API = "https://arctic-shift.photon-reddit.com/api"
 CABECALHO = {"User-Agent": "MINDResearchBot/0.1 (pesquisa academica)"}
-SAL = os.environ.get("MIND_SALT", "mind-dev")
 PAUSA = 1.0
 MINIMO_CHARS = 60
 
@@ -33,8 +32,14 @@ MINIMO_CHARS = 60
 # retornam nada — subreddit inexistente devolve lista vazia sem erro, e a
 # varredura gastaria a janela inteira em silêncio.
 SUBREDDITS = [
-    "brasil", "brasilivre", "BrasildoB", "politica",
-    "esquerdaBR", "circojeca", "investimentos", "saopaulo",
+    "brasil",
+    "brasilivre",
+    "BrasildoB",
+    "politica",
+    "esquerdaBR",
+    "circojeca",
+    "investimentos",
+    "saopaulo",
 ]
 
 
@@ -51,7 +56,7 @@ def _buscar(c: httpx.Client, rota: str, params: dict) -> list[dict]:
         if r.status_code == 200:
             return r.json().get("data", [])
         if r.status_code in (429, 502, 503):
-            time.sleep(2 ** tentativa * 3)
+            time.sleep(2**tentativa * 3)
             continue
         return []
     return []
@@ -64,9 +69,13 @@ def existe(sub: str) -> bool:
         return bool(_buscar(c, "posts/search", {"subreddit": sub, "limit": 1}))
 
 
-def coletar(subreddits: Iterable[str] | None = None, de: str | None = None,
-            ate: str | None = None, por_sub: int = 500,
-            comentarios: bool = True) -> Iterator[Documento]:
+def coletar(
+    subreddits: Iterable[str] | None = None,
+    de: str | None = None,
+    ate: str | None = None,
+    por_sub: int = 500,
+    comentarios: bool = True,
+) -> Iterator[Documento]:
     subs = list(subreddits or SUBREDDITS)
     base = {"limit": 100, "sort": "desc"}
     if de:
@@ -76,8 +85,7 @@ def coletar(subreddits: Iterable[str] | None = None, de: str | None = None,
 
     with httpx.Client(headers=CABECALHO, follow_redirects=True) as c:
         for sub in subs:
-            for rota, campo in (("posts/search", "selftext"),
-                                ("comments/search", "body")):
+            for rota, campo in (("posts/search", "selftext"), ("comments/search", "body")):
                 if rota.startswith("comments") and not comentarios:
                     continue
                 vistos = 0
@@ -108,8 +116,11 @@ def coletar(subreddits: Iterable[str] | None = None, de: str | None = None,
                             veiculado_em=quando,
                             # Usuário de Reddit não é figura pública: identificador
                             # nunca em claro (LGPD, art. 5º, II).
-                            autor_hash=anonimizar(str(it.get("author")), SAL)
-                            if it.get("author") else None,
+                            autor_hash=anonimizar(
+                                str(it.get("author")), os.environ.get("MIND_SALT", "mind-dev")
+                            )
+                            if it.get("author")
+                            else None,
                             metadados={
                                 "subreddit": sub,
                                 "tipo": "post" if "posts" in rota else "comentario",

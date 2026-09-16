@@ -23,17 +23,35 @@ import httpx
 
 from ..schema import Documento
 
-API = "https://graph.facebook.com/v21.0/ads_archive"
-
 # Só o que o projeto usa. Pedir campo demais estoura o custo interno da Meta e
 # derruba o limite de chamadas antes das 200/hora nominais.
 CAMPOS = [
-    "id", "ad_creation_time", "ad_creative_bodies", "ad_creative_link_titles",
-    "ad_creative_link_descriptions", "ad_creative_link_captions",
-    "ad_delivery_start_time", "ad_delivery_stop_time", "ad_snapshot_url",
-    "page_id", "page_name", "bylines", "currency", "spend", "impressions",
-    "publisher_platforms", "languages", "demographic_distribution",
-    "delivery_by_region", "estimated_audience_size", "target_ages", "target_gender",
+    "id",
+    "ad_creation_time",
+    "ad_creative_bodies",
+    "ad_creative_link_titles",
+    "ad_creative_link_descriptions",
+    "ad_creative_link_captions",
+    "ad_delivery_start_time",
+    "ad_delivery_stop_time",
+    "ad_snapshot_url",
+    "page_id",
+    "page_name",
+    "bylines",
+    "currency",
+    "spend",
+    "impressions",
+    "publisher_platforms",
+    "languages",
+    "demographic_distribution",
+    "delivery_by_region",
+    "estimated_audience_size",
+    "target_ages",
+    "target_gender",
+    "br_total_reach",
+    "age_country_gender_reach_breakdown",
+    "target_locations",
+    "total_reach_by_location",
 ]
 
 PAUSA = 18.0  # 200 chamadas/hora = uma a cada 18s
@@ -54,8 +72,15 @@ def token() -> str:
     return t
 
 
+def api() -> str:
+    versao = os.environ.get("META_GRAPH_API_VERSION", "v26.0").strip()
+    if not versao.startswith("v"):
+        versao = "v" + versao
+    return f"https://graph.facebook.com/{versao}/ads_archive"
+
+
 def _pagina(cliente: httpx.Client, params: dict) -> tuple[list[dict], str | None]:
-    r = cliente.get(API, params=params, timeout=60)
+    r = cliente.get(api(), params=params, timeout=60)
     if r.status_code == 400:
         raise RuntimeError(f"Ad Library recusou: {r.json().get('error', {}).get('message')}")
     r.raise_for_status()
@@ -63,9 +88,14 @@ def _pagina(cliente: httpx.Client, params: dict) -> tuple[list[dict], str | None
     return d.get("data", []), d.get("paging", {}).get("next")
 
 
-def buscar(termos: str | None = None, paginas: list[str] | None = None,
-           de: str | None = None, ate: str | None = None,
-           pais: str = "BR", limite_paginas: int = 100) -> Iterator[dict]:
+def buscar(
+    termos: str | None = None,
+    paginas: list[str] | None = None,
+    de: str | None = None,
+    ate: str | None = None,
+    pais: str = "BR",
+    limite_paginas: int = 100,
+) -> Iterator[dict]:
     """Varre a Ad Library. `paginas` são search_page_ids do registro de candidaturas.
 
     Enumerar por página é melhor que buscar por palavra-chave: cobre tudo que o
@@ -106,8 +136,12 @@ def _texto(anuncio: dict) -> str:
     """Junta os campos de criativo. A API devolve listas — um anúncio pode ter
     várias variações de texto no mesmo id."""
     partes: list[str] = []
-    for campo in ("ad_creative_link_titles", "ad_creative_bodies",
-                  "ad_creative_link_descriptions", "ad_creative_link_captions"):
+    for campo in (
+        "ad_creative_link_titles",
+        "ad_creative_bodies",
+        "ad_creative_link_descriptions",
+        "ad_creative_link_captions",
+    ):
         partes += [p for p in (anuncio.get(campo) or []) if p]
     vistos, saida = set(), []
     for p in partes:
@@ -143,12 +177,18 @@ def para_documento(anuncio: dict, eleicao: str | None = None) -> Documento:
         veiculado_ate=anuncio.get("ad_delivery_stop_time"),
         patrocinador=anuncio.get("bylines") or anuncio.get("page_name"),
         gasto=_numero(anuncio.get("spend")),
-        alcance=int(_numero(anuncio.get("impressions")) or 0) or None,
+        alcance=int(
+            _numero(anuncio.get("br_total_reach")) or _numero(anuncio.get("impressions")) or 0
+        )
+        or None,
         segmentacao={
             "demografia": anuncio.get("demographic_distribution"),
             "regiao": anuncio.get("delivery_by_region"),
             "idades": anuncio.get("target_ages"),
             "genero": anuncio.get("target_gender"),
+            "localizacoes_alvo": anuncio.get("target_locations"),
+            "alcance_por_localizacao": anuncio.get("total_reach_by_location"),
+            "alcance_idade_pais_genero": anuncio.get("age_country_gender_reach_breakdown"),
         },
         metadados={
             "ad_id": anuncio.get("id"),

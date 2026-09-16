@@ -1,0 +1,56 @@
+name: Data portability
+
+on:
+  push:
+    paths:
+      - ".github/workflows/data-portability.yml"
+      - "mind_collect/**"
+      - "tests/**"
+      - "scripts/get_data.py"
+      - "pyproject.toml"
+      - "uv.lock"
+  pull_request:
+    paths:
+      - ".github/workflows/data-portability.yml"
+      - "mind_collect/**"
+      - "tests/**"
+      - "scripts/get_data.py"
+      - "pyproject.toml"
+      - "uv.lock"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python 3.12 / ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          python-version: "3.12"
+          version: "0.10.9"
+      - name: Check base installation without extras
+        run: |
+          uv run --isolated --locked --no-dev mind-data --help
+          uv run --isolated --locked --no-dev python -m mind_collect.run --help
+      - name: Install portable dependencies
+        run: uv sync --locked --extra collect --dev
+      - name: Check installed CLIs
+        run: |
+          uv run mind-data --help
+          uv run python -m mind_collect.run --help
+      - name: Check formatting and lint
+        run: |
+          uv run ruff format --check .
+          uv run ruff check .
+      - name: Run tests
+        run: uv run pytest -q
+      - name: Test academic dataset downloader
+        run: uv run python scripts/get_data.py --selftest

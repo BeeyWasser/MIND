@@ -39,18 +39,21 @@ class Mapa:
     chave: str
     url: str
     fonte: str = "noticia"
-    licenca: str = "livre"
-    padrao: str | None = None   # regex que a URL da matéria precisa casar
+    licenca: str = "referencia"
+    padrao: str | None = None  # regex que a URL da matéria precisa casar
 
 
 MAPAS: list[Mapa] = [
-    Mapa("sm-g1", "https://g1.globo.com/sitemap/g1/sitemap.xml",
-         padrao=r"/politica/|/eleicoes/"),
-    Mapa("sm-poder360", "https://www.poder360.com.br/sitemap_index.xml",
-         padrao=r"/eleicoes|/poder"),
-    Mapa("sm-lupa",
-         "https://www.agencialupa.org/wp-content/sitemaps/posts/post-sitemap-index.xml",
-         "checagem", "referencia"),
+    Mapa("sm-g1", "https://g1.globo.com/sitemap/g1/sitemap.xml", padrao=r"/politica/|/eleicoes/"),
+    Mapa(
+        "sm-poder360", "https://www.poder360.com.br/sitemap_index.xml", padrao=r"/eleicoes|/poder"
+    ),
+    Mapa(
+        "sm-lupa",
+        "https://www.agencialupa.org/wp-content/sitemaps/posts/post-sitemap-index.xml",
+        "checagem",
+        "referencia",
+    ),
 ]
 
 POR_CHAVE = {m.chave: m for m in MAPAS}
@@ -75,8 +78,7 @@ def _xml(cliente: Cliente, url: str) -> ET.Element | None:
         return None
 
 
-def urls(cliente: Cliente, raiz: str, limite: int = 2000,
-         profundidade: int = 2) -> Iterator[str]:
+def urls(cliente: Cliente, raiz: str, limite: int = 2000, profundidade: int = 2) -> Iterator[str]:
     """Percorre índice de sitemap até as URLs finais."""
     raiz_xml = _xml(cliente, raiz)
     if raiz_xml is None:
@@ -100,13 +102,15 @@ def urls(cliente: Cliente, raiz: str, limite: int = 2000,
                 return
 
 
-def coletar(cliente: Cliente, mapa: Mapa, limite: int = 500) -> Iterator[Documento]:
+def coletar(cliente: Cliente, mapa: Mapa, limite: int = 500, ja_tem=None) -> Iterator[Documento]:
     padrao = re.compile(mapa.padrao) if mapa.padrao else None
     n = 0
     for url in urls(cliente, mapa.url, limite=limite * 4):
         if n >= limite:
             return
         if LIXO.search(url) or (padrao and not padrao.search(url)):
+            continue
+        if ja_tem and ja_tem(url):
             continue
         try:
             r = cliente.buscar(url, condicional=False)

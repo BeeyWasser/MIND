@@ -23,7 +23,7 @@ UA = (
     "contato: daviabreudasilveira@gmail.com)"
 )
 
-PAUSA_PADRAO = 1.0   # segundos entre pedidos ao mesmo host
+PAUSA_PADRAO = 1.0  # segundos entre pedidos ao mesmo host
 TENTATIVAS = 3
 
 
@@ -50,8 +50,9 @@ class Bloqueado(Exception):
 
 
 class Cliente:
-    def __init__(self, pausa: float = PAUSA_PADRAO, cache: Path | None = None,
-                 respeitar_robots: bool = True):
+    def __init__(
+        self, pausa: float = PAUSA_PADRAO, cache: Path | None = None, respeitar_robots: bool = True
+    ):
         self.pausa = pausa
         self.respeitar_robots = respeitar_robots
         self._ultimo: dict[str, float] = {}
@@ -158,8 +159,12 @@ class Cliente:
                     "modificado_em": r.headers.get("Last-Modified"),
                 }
             return Resposta(
-                url=str(r.url), status=r.status_code, texto=r.text, conteudo=r.content,
-                etag=r.headers.get("ETag"), modificado_em=r.headers.get("Last-Modified"),
+                url=str(r.url),
+                status=r.status_code,
+                texto=r.text,
+                conteudo=r.content,
+                etag=r.headers.get("ETag"),
+                modificado_em=r.headers.get("Last-Modified"),
             )
 
         if erro:

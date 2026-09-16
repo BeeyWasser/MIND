@@ -22,11 +22,12 @@ CONFIANCA_MINIMA = 0.4
 class Achado:
     texto: str
     confianca: float
-    caixa: tuple[float, float, float, float]   # x, y, largura, altura, normalizado
+    caixa: tuple[float, float, float, float]  # x, y, largura, altura, normalizado
 
 
-def ler(imagem: Path, idiomas: tuple[str, ...] = ("pt-BR", "en-US"),
-        minimo: float = CONFIANCA_MINIMA) -> list[Achado]:
+def ler(
+    imagem: Path, idiomas: tuple[str, ...] = ("pt-BR", "en-US"), minimo: float = CONFIANCA_MINIMA
+) -> list[Achado]:
     from ocrmac import ocrmac
 
     bruto = ocrmac.OCR(str(imagem), language_preference=list(idiomas)).recognize()
@@ -44,15 +45,20 @@ def texto(achados: list[Achado]) -> str:
     O Vision devolve por região, e a ordem bruta não é a de leitura. Em meme, com
     manchete em cima e ressalva embaixo, a ordem muda o sentido.
     """
+
     def chave(a: Achado):
         x, y, _, _ = a.caixa
-        return (-round(y, 2), round(x, 2))   # y cresce para cima no Vision
+        return (-round(y, 2), round(x, 2))  # y cresce para cima no Vision
 
     return "\n".join(a.texto for a in sorted(achados, key=chave))
 
 
-def divergente(achados: list[Achado], transcricao_texto: str,
-               minimo_palavras: int = 3, sobreposicao: float = 0.6) -> list[Achado]:
+def divergente(
+    achados: list[Achado],
+    transcricao_texto: str,
+    minimo_palavras: int = 3,
+    sobreposicao: float = 0.6,
+) -> list[Achado]:
     """Separa grafismo de tela da legenda queimada.
 
     Em HGPE boa parte do que o OCR lê é legenda, que repete o áudio palavra por
@@ -76,7 +82,7 @@ def divergente(achados: list[Achado], transcricao_texto: str,
     for a in achados:
         palavras = normalizar(a.texto).split()
         if len(palavras) < minimo_palavras:
-            saida.append(a)          # curto demais para ser legenda
+            saida.append(a)  # curto demais para ser legenda
             continue
         # Sobreposição de palavras, não casamento literal: onde o Whisper perde
         # ou parafraseia um trecho, a legenda correspondente pareceria grafismo
