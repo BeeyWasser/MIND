@@ -1,4 +1,4 @@
-"""Distribuição verificável e privada do corpus eleitoral.
+"""Backup verificável e local do corpus eleitoral.
 
 O módulo cria snapshots portáveis sem copiar sessões, credenciais, downloads
 parciais ou arquivos de execução. Os snapshots podem ser verificados e
@@ -18,7 +18,7 @@ import stat
 import subprocess
 import tempfile
 import zipfile
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -111,9 +111,6 @@ BUFFER_SIZE = 1024 * 1024
 
 class BundleError(RuntimeError):
     """Snapshot inválido, inseguro ou impossível de processar."""
-
-
-CommandRunner = Callable[[Sequence[str]], str]
 
 
 def _utc_now() -> datetime:
@@ -1080,103 +1077,6 @@ def restore_bundle(
     return backup_path
 
 
-def _run_gh(arguments: Sequence[str]) -> str:
-    try:
-        result = subprocess.run(
-            ["gh", *arguments],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError as error:
-        raise BundleError("GitHub CLI (gh) não está instalado") from error
-    except subprocess.CalledProcessError as error:
-        detail = (error.stderr or error.stdout or str(error)).strip()
-        raise BundleError(f"gh falhou: {detail}") from error
-    return result.stdout
-
-
-def _require_private_repository(repository: str, runner: CommandRunner) -> None:
-    try:
-        payload = json.loads(runner(["repo", "view", repository, "--json", "visibility"]))
-    except json.JSONDecodeError as error:
-        raise BundleError("resposta inválida do GitHub CLI") from error
-    if payload.get("visibility") != "PRIVATE":
-        raise BundleError(
-            f"publicação recusada: {repository} não é privado. "
-            "O corpus não pode ir para o repositório público do código."
-        )
-
-
-def publish_bundle(
-    index_path: Path,
-    repository: str,
-    tag: str | None = None,
-    allow_full_private: bool = False,
-    runner: CommandRunner = _run_gh,
-) -> str:
-    """Publica um bundle imutável em Release de um repositório privado."""
-    index_path = index_path.resolve()
-    manifest = verify_bundle(index_path)
-    index = _read_index(index_path)
-    if manifest["profile"] == "full-private" and not allow_full_private:
-        raise BundleError("publicação full-private exige revisão de licença e --allow-full-private")
-    _require_private_repository(repository, runner)
-    release_tag = tag or f"eleicoes2026-{manifest['snapshot_id']}"
-    assets = [index_path]
-    for part in index["parts"]:
-        asset = index_path.parent / part["name"]
-        if not asset.is_file():
-            raise BundleError(f"parte ausente: {asset}")
-        assets.append(asset)
-    notes = (
-        "Snapshot privado e verificável do corpus eleitoral MIND.\n\n"
-        f"Perfil: {manifest['profile']}\n"
-        f"Arquivos: {manifest['file_count']}\n"
-        f"Documentos: {manifest['database'].get('documentos', 0)}\n\n"
-        "Baixe o índice *.bundle.json e todas as partes; depois execute "
-        "`uv run mind-data restore caminho/do/indice.bundle.json`."
-    )
-    runner(
-        [
-            "release",
-            "create",
-            release_tag,
-            "--repo",
-            repository,
-            "--title",
-            f"Corpus eleitoral {manifest['snapshot_id']}",
-            "--notes",
-            notes,
-            *[str(asset) for asset in assets],
-        ]
-    )
-    return release_tag
-
-
-def fetch_bundle(
-    repository: str,
-    destination: Path = CORPUS_ROOT,
-    release: str | None = None,
-    replace: bool = False,
-    runner: CommandRunner = _run_gh,
-) -> Path | None:
-    """Baixa a Release privada, verifica e restaura o corpus."""
-    _require_private_repository(repository, runner)
-    with tempfile.TemporaryDirectory(prefix="mind-download-") as temporary:
-        arguments = ["release", "download"]
-        if release:
-            arguments.append(release)
-        arguments.extend(["--repo", repository, "--dir", temporary])
-        runner(arguments)
-        indexes = list(Path(temporary).glob("*.bundle.json"))
-        if len(indexes) != 1:
-            raise BundleError(
-                f"a Release deve conter exatamente um índice; encontrados: {len(indexes)}"
-            )
-        return restore_bundle(indexes[0], destination=destination, replace=replace)
-
-
 def _human_bytes(value: int) -> str:
     size = float(value)
     for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
@@ -1210,7 +1110,7 @@ def _build_parser() -> argparse.ArgumentParser:
     status.add_argument("--source", type=Path, default=CORPUS_ROOT)
     status.add_argument("--json", action="store_true")
 
-    pack = subparsers.add_parser("pack", help="cria snapshot privado verificável")
+    pack = subparsers.add_parser("pack", help="cria snapshot local verificável")
     pack.add_argument("--source", type=Path, default=CORPUS_ROOT)
     pack.add_argument("--output", type=Path, default=REPO_ROOT / "dist" / "data")
     pack.add_argument("--profile", choices=("team", "full-private"), default="team")
@@ -1224,17 +1124,6 @@ def _build_parser() -> argparse.ArgumentParser:
     restore.add_argument("--destination", type=Path, default=CORPUS_ROOT)
     restore.add_argument("--replace", action="store_true")
 
-    publish = subparsers.add_parser("publish", help="publica em Release privada")
-    publish.add_argument("bundle", type=Path)
-    publish.add_argument("--repository", required=True)
-    publish.add_argument("--tag")
-    publish.add_argument("--allow-full-private", action="store_true")
-
-    fetch = subparsers.add_parser("fetch", help="baixa e restaura uma Release privada")
-    fetch.add_argument("--repository", required=True)
-    fetch.add_argument("--release")
-    fetch.add_argument("--destination", type=Path, default=CORPUS_ROOT)
-    fetch.add_argument("--replace", action="store_true")
     return parser
 
 
@@ -1267,26 +1156,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             backup = restore_bundle(
                 arguments.bundle,
                 destination=arguments.destination,
-                replace=arguments.replace,
-            )
-            print(f"Corpus restaurado em {arguments.destination.resolve()}")
-            if backup:
-                print(f"Cópia anterior preservada em {backup}")
-        elif arguments.command == "publish":
-            print("Verificando e enviando o snapshot privado...", flush=True)
-            tag = publish_bundle(
-                arguments.bundle,
-                repository=arguments.repository,
-                tag=arguments.tag,
-                allow_full_private=arguments.allow_full_private,
-            )
-            print(f"Release criada: {arguments.repository}@{tag}")
-        elif arguments.command == "fetch":
-            print("Baixando, verificando e restaurando o snapshot...", flush=True)
-            backup = fetch_bundle(
-                repository=arguments.repository,
-                destination=arguments.destination,
-                release=arguments.release,
                 replace=arguments.replace,
             )
             print(f"Corpus restaurado em {arguments.destination.resolve()}")

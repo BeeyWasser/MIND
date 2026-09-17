@@ -14,7 +14,6 @@ import mind_collect.data_bundle as data_bundle
 from mind_collect.data_bundle import (
     BundleError,
     pack_bundle,
-    publish_bundle,
     restore_bundle,
     verify_bundle,
 )
@@ -373,29 +372,6 @@ def test_restore_preserves_docs_and_keeps_backup_on_replace(corpus: Path, tmp_pa
     assert backup is not None
     assert (backup / "anotacoes-locais.txt").read_text() == "não perder"
     assert (destination / "README.md").read_text() == "documentação versionada"
-
-
-def test_publish_refuses_public_repository_before_upload(corpus: Path, tmp_path: Path) -> None:
-    index_path = create_bundle(corpus, tmp_path / "out")
-    calls: list[list[str]] = []
-
-    def runner(arguments):
-        calls.append(list(arguments))
-        return '{"visibility":"PUBLIC"}'
-
-    with pytest.raises(BundleError, match="não é privado"):
-        publish_bundle(index_path, "BeeyWasser/MIND", runner=runner)
-
-    assert calls == [["repo", "view", "BeeyWasser/MIND", "--json", "visibility"]]
-
-
-def test_publish_full_private_requires_explicit_license_override(
-    corpus: Path, tmp_path: Path
-) -> None:
-    index_path = create_bundle(corpus, tmp_path / "out", profile="full-private")
-
-    with pytest.raises(BundleError, match="revisão de licença"):
-        publish_bundle(index_path, "daviiabreu/MIND-data", runner=lambda _arguments: "")
 
 
 def test_pack_rechecks_the_content_written_to_zip(

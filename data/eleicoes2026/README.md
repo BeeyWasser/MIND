@@ -1,97 +1,111 @@
 # Corpus eleitoral do MIND
 
-Este diretório é a área de trabalho da coleta das eleições brasileiras. Os
-dados reais ficam ignorados pelo Git; este guia e a especificação são os únicos
-arquivos daqui que devem ser enviados ao repositório de código.
+Esta pasta é a área local da coleta das eleições brasileiras. O repositório
+público contém este guia, a especificação e o código necessário para obter os
+dados. O que for baixado ou produzido aqui fica fora do Git.
 
-O corpus é interno. Em 15 de setembro de 2026, somente 40 dos 160.918
-documentos estavam marcados como `livre`; os outros 160.878 estavam marcados
-como `referencia`. Conteúdo público não é automaticamente conteúdo com licença
-para redistribuição. Não publique o corpus em uma Release deste repositório,
-que é público.
+Em um clone novo, portanto, esta pasta começa apenas com `README.md` e
+`SPEC.md`. Cada máquina baixa fontes públicas e constrói seu próprio corpus.
 
-## Estado verificado
+## Regra do repositório
 
-Na última auditoria local:
+O `.gitignore` mantém fora do histórico:
+
+- `mind.db` e seus arquivos WAL/SHM;
+- documentos `*.jsonl.gz`;
+- vídeos, áudios, imagens, frames, OCR e transcrições;
+- downloads do TSE e datasets intermediários;
+- sessões, cookies, credenciais, logs, locks e arquivos parciais;
+- snapshots locais criados em `dist/`.
+
+Não use `git add -f` nesses arquivos. O repositório deve continuar leve e
+público; ele ensina como obter os dados, mas não redistribui o corpus coletado.
+
+## Estado da máquina original
+
+Na auditoria de 16 de setembro de 2026, a máquina coletora tinha:
 
 - 160.918 documentos;
 - 31.503 registros de mídia;
 - 2.626 transcrições;
 - 1.910 snapshots de perfis públicos;
-- cerca de 73,8 mil arquivos e 8,7 GiB;
+- 73.797 arquivos e aproximadamente 8,7 GiB;
 - `PRAGMA quick_check` do SQLite: `ok`;
 - última coleta registrada: 4 de setembro de 2026;
-- três execuções antigas ainda estavam sem horário de término.
+- três execuções antigas sem horário de término.
 
-Esses números envelhecem. O estado atual deve ser consultado com:
+Esses números descrevem aquela máquina, não o conteúdo do Git. Consulte o seu
+estado local com:
 
 ```bash
 uv run mind-data status
 uv run mind-data status --json
 ```
 
-## O que existe aqui
+## O que é criado aqui
 
-| Caminho | Conteúdo | Entra no snapshot `team`? |
-|---|---|:---:|
-| `mind.db` | índice, filas, cursores, transcrições, OCR, rótulos e histórico operacional | sim, por backup consistente |
-| `<fonte>/*.jsonl.gz` | documentos canônicos por fonte e dia | sim |
-| `perfis_sociais.jsonl` | visão legível dos perfis públicos | sim, regenerada do SQLite |
-| `_midia/thumbs/` | miniaturas para revisão humana | sim |
-| `_midia/frames/` | keyframes de vídeo | não |
-| `_midia/*.{m4a,mp3,mp4,json}` | mídia e caches de processamento | não |
-| `_tse/` e `_datasets/` | downloads e proveniência intermediária | não |
-| `_quarentena/` | material ainda não aceito no corpus | nunca |
-| `_telegram.session` | sessão antiga; novas sessões ficam fora desta árvore | nunca |
-| `_logs/`, `*.part`, `*.lock`, WAL/SHM | estado temporário | nunca |
+| Caminho | Conteúdo |
+|---|---|
+| `mind.db` | índice, filas, cursores, transcrições, OCR, rótulos e histórico operacional |
+| `<fonte>/*.jsonl.gz` | documentos canônicos separados por fonte e dia |
+| `perfis_sociais.jsonl` | exportação legível dos perfis públicos descobertos |
+| `_midia/` | áudio, vídeo, imagens, frames, miniaturas e caches de processamento |
+| `_tse/` e `_tse_abertos/` | downloads e proveniência dos dados oficiais |
+| `_datasets/` | bases externas e material intermediário reconstruível |
+| `_quarentena/` | itens que ainda não foram aceitos no corpus |
+| `_logs/` | registros locais de execução |
 
-O perfil `full-private` inclui mídia, frames, caches de transcrição e
-proveniência do TSE somente em formatos e caminhos permitidos. Datasets externos
-reconstruíveis continuam fora. O perfil também exclui sessões, credenciais,
-cookies, chaves privadas, formatos desconhecidos, quarentena, logs, locks,
-downloads parciais e arquivos `unknown_video`.
+Sessões autenticadas ficam em `.local-state/mind/`, fora desta pasta e do Git.
 
-## Instalação em qualquer sistema
+## Instalação
 
 Pré-requisitos:
 
 1. Git;
 2. [uv](https://docs.astral.sh/uv/getting-started/installation/);
-3. [GitHub CLI](https://cli.github.com/) para baixar ou publicar snapshots;
-4. acesso de leitura ao repositório privado dos dados.
+3. FFmpeg para áudio, vídeo e keyframes;
+4. Poppler (`pdftotext`) para propostas de governo em PDF.
 
-Os comandos abaixo foram desenhados para Windows, macOS e Linux:
+Clone e instale a coleta portátil:
 
 ```bash
 git clone https://github.com/BeeyWasser/MIND.git
 cd MIND
 uv sync --locked --extra collect
-gh auth login
-uv run mind-data status
+uv run python -m mind_collect.run --credenciais
 ```
 
-O extra `collect` instala aquisição de mídia e processamento de imagens
-portáveis. Transcrição com MLX e OCR com Vision são acelerações exclusivas do
-macOS 14 ou mais novo com Apple Silicon; nesse computador use
-`uv sync --locked --extra media`.
-Baixar, verificar, restaurar e executar a coleta de rede não depende delas.
-O workflow `.github/workflows/data-portability.yml` executa instalação, CLIs,
-lint e testes nos três sistemas quando estas mudanças forem enviadas ao GitHub.
-Até essa execução remota ocorrer, a validação completa feita nesta entrega é do
-macOS; Windows e Linux tiveram resolução de dependências e contratos testados,
-mas ainda precisam da primeira execução real da matriz.
+No Ubuntu/Debian:
 
-FFmpeg é necessário para áudio, vídeo e keyframes; `pdftotext`, fornecido pelo
-Poppler, é necessário para propostas de governo em PDF. No Ubuntu/Debian use
-`sudo apt install ffmpeg poppler-utils`; no macOS use
-`brew install ffmpeg poppler`. No Windows, instale os pacotes indicados nas
-páginas de download do [FFmpeg](https://ffmpeg.org/download.html) e do
-[Poppler](https://poppler.freedesktop.org/), adicione os executáveis ao `PATH` e
-abra um novo PowerShell. `uv run python -m mind_collect.run --credenciais`
-mostra se ambos estão disponíveis.
+```bash
+sudo apt install ffmpeg poppler-utils
+```
 
-Por padrão os dados ficam no checkout, em `data/eleicoes2026`. Para guardar o
-corpus em outro disco, defina `MIND_DATA_DIR` antes de iniciar o programa.
+No macOS:
+
+```bash
+brew install ffmpeg poppler
+```
+
+No Windows, instale os pacotes indicados nas páginas do
+[FFmpeg](https://ffmpeg.org/download.html) e do
+[Poppler](https://poppler.freedesktop.org/), adicione os executáveis ao `PATH`
+e abra um novo PowerShell.
+
+Transcrição com MLX e OCR com Vision exigem macOS 14 ou mais novo com Apple
+Silicon. Nessa máquina, instale:
+
+```bash
+uv sync --locked --extra media
+```
+
+Windows e Linux podem coletar URLs, textos e metadados. O backend multimodal
+atual não é portátil para esses sistemas.
+
+## Escolher outro disco
+
+Por padrão, o corpus fica em `data/eleicoes2026/`. Para usar outro disco,
+defina `MIND_DATA_DIR` antes de iniciar o programa.
 
 macOS e Linux:
 
@@ -105,178 +119,118 @@ PowerShell:
 $env:MIND_DATA_DIR = "$HOME\mind-data\eleicoes2026"
 ```
 
-Não coloque o banco ativo em pasta sincronizada por Drive, Dropbox ou OneDrive.
-O SQLite deve ter um único computador escritor. Compartilhe snapshots fechados.
-Sessões autenticadas ficam em `.local-state/mind/` ou no diretório definido por
-`MIND_STATE_DIR`, sempre fora do corpus e do Git.
+Não mantenha o SQLite ativo em Drive, Dropbox ou OneDrive. Use uma pasta local
+com um único processo escritor.
 
-## Baixar o mesmo corpus da equipe
+## Baixar e coletar os dados
 
-O armazenamento recomendado para a equipe é um repositório GitHub **privado e
-separado**, [`daviiabreu/MIND-data`](https://github.com/daviiabreu/MIND-data).
-Ele usa as mesmas permissões de repositório que os alunos já conhecem. Os dados
-ficam em Releases, não em commits nem em Git LFS.
-
-Depois que o aluno tiver acesso:
+Copie o exemplo de configuração e preencha somente os acessos gratuitos que
+tiver:
 
 ```bash
-uv run mind-data fetch --repository daviiabreu/MIND-data
-```
-
-O comando baixa a Release mais recente, verifica SHA-256 das partes, abre o ZIP
-sem aceitar caminhos inseguros, confere cada arquivo, executa `quick_check` no
-SQLite e só então restaura o corpus. Para escolher uma versão:
-
-```bash
-uv run mind-data fetch \
-  --repository daviiabreu/MIND-data \
-  --release eleicoes2026-20260916T003307Z-team
-```
-
-No PowerShell, use o comando em uma linha ou troque `\` pelo acento grave de
-continuação. O formato do snapshot é o mesmo em todos os sistemas.
-
-Se já houver dados no destino, o comando para e não apaga nada. Para substituir
-o corpus após uma nova Release:
-
-```bash
-uv run mind-data fetch --repository daviiabreu/MIND-data --replace
-```
-
-A versão anterior é movida para uma pasta `eleicoes2026.backup-<data>`. Apague
-esse backup somente depois de validar o novo corpus.
-
-## Criar e enviar um snapshot
-
-Antes de compartilhar, prefira interromper novas coletas para evitar trabalho
-desnecessário. O empacotador usa a API de backup do SQLite, compara os JSONL
-antes da cópia e repete a reconciliação sobre os bytes já gravados no ZIP. Se
-um processo de coleta alterar o corpus no intervalo, a criação aborta em vez de
-publicar um estado misto.
-
-Snapshot padrão da equipe:
-
-```bash
-uv run mind-data pack --profile team
-uv run mind-data verify dist/data/ARQUIVO.bundle.json
-uv run mind-data publish \
-  dist/data/ARQUIVO.bundle.json \
-  --repository daviiabreu/MIND-data
-```
-
-Snapshot completo, somente quando houver necessidade e autorização para a
-mídia:
-
-```bash
-uv run mind-data pack --profile full-private
-```
-
-O comando de publicação recusa esse perfil por padrão. Depois de uma revisão
-documentada de licença e necessidade, o responsável precisa acrescentar
-`--allow-full-private`; o perfil `team` não exige esse override.
-
-Arquivos maiores que 1.900 MiB são divididos automaticamente. O índice
-`*.bundle.json` registra tamanho e SHA-256 do ZIP, das partes, do manifesto e
-de cada arquivo interno. A publicação é recusada se o repositório de destino
-não for privado.
-
-## Acesso ao armazenamento
-
-O repositório foi criado como `PRIVATE` e a Release
-`eleicoes2026-20260916T003307Z-team` foi publicada e testada de ponta a ponta.
-Ela contém um índice de 636 bytes e um ZIP de 429 MiB. O download remoto,
-verificação e restauração devolveram 32.190 arquivos e 160.918 documentos.
-Reserve pelo menos 2 GiB livres para uma primeira restauração do perfil `team`,
-porque download, ZIP verificado e arquivos extraídos coexistem temporariamente.
-Com `--replace`, reserve também espaço para manter a cópia anterior; consulte o
-tamanho dela com `uv run mind-data status` antes de começar.
-
-O responsável deve adicionar cada orientado como colaborador com acesso de
-leitura. Pela interface, use **Settings > Collaborators**. Pela CLI:
-
-```bash
-gh api --method PUT \
-  repos/daviiabreu/MIND-data/collaborators/USUARIO_GITHUB \
-  -f permission=pull
-gh repo view daviiabreu/MIND-data --json visibility
-```
-
-O último comando precisa responder `PRIVATE`. Dê escrita apenas a quem for
-produzir snapshots oficiais. Adicione também um segundo responsável
-administrativo para o projeto não depender de uma única conta pessoal. A única
-pendência para liberar o download é receber os nomes de usuário dos orientados
-e aceitar os convites.
-
-## Uso interno e retirada
-
-O repositório privado é um controle de acesso, não uma licença. O snapshot é
-compartilhado somente com a equipe de pesquisa para análise interna, sem
-republicação, espelhamento ou redistribuição dos textos e miniaturas. Cada
-orientado deve manter o repositório privado e apagar a cópia ao deixar o grupo.
-
-Se uma fonte, autor ou titular solicitar retirada, o responsável registra a
-URL e a fonte, remove o documento e seus derivados do corpus autoritativo,
-publica um novo snapshot e avisa a equipe para apagar o anterior. Antes de
-qualquer dataset aberto, a equipe precisa revisar licença por fonte e publicar
-apenas conteúdo `livre` ou IDs, URLs, hashes e scripts permitidos.
-
-## Continuar a coleta
-
-A coleta de rede foi projetada para Windows, macOS e Linux:
-
-```bash
+cp .env.exemplo .env
 uv run python -m mind_collect.run --credenciais
+```
+
+No PowerShell, o primeiro comando equivalente é:
+
+```powershell
+Copy-Item .env.exemplo .env
+```
+
+O ciclo sem transcrição funciona mesmo sem tokens e usa RSS, Bing News, GDELT,
+Common Crawl, Wayback, TSE, Câmara, Senado, Reddit via Arctic Shift, Bluesky e
+YouTube público:
+
+```bash
 uv run python -m mind_collect.run --ciclo --sem-transcricao
 uv run python -m mind_collect.run --exportar-perfis
 uv run mind-data status
 ```
 
-As fontes sem custo e as credenciais opcionais estão em
-[`CREDENCIAIS.md`](../../CREDENCIAIS.md). O pipeline não usa Brave Search nem
-outra API paga. Sem credenciais, RSS, Bing News, GDELT, Common Crawl, Wayback,
-TSE, Câmara, Senado, Reddit via Arctic Shift, Bluesky e YouTube público ainda
-podem rodar. O conteúdo do Reddit fica somente como referência interna, sem uso
-para treino ou redistribuição; veja as restrições em `CREDENCIAIS.md`.
+As fontes, seus custos e o passo a passo de cada credencial estão em
+[`CREDENCIAIS.md`](../../CREDENCIAIS.md). A política atual não usa Brave Search
+nem outro serviço pago.
 
-Para mídia no macOS 14 ou mais novo com Apple Silicon:
+Para executar fontes isoladas:
+
+```bash
+uv run python -m mind_collect.run --feeds
+uv run python -m mind_collect.run --bluesky --limite 100
+uv run python -m mind_collect.run --telegram --limite 300
+uv run python -m mind_collect.run --youtube-comments --limite 5 --paginas-comentarios 5
+uv run python -m mind_collect.run --commoncrawl --de 201801 --limite 200
+uv run python -m mind_collect.run --wayback --de 201801 --limite 200
+uv run python -m mind_collect.run --tse
+uv run python -m mind_collect.run --tse-abertos --limite 500
+uv run python -m mind_collect.run --dou-espelho --limite 500
+```
+
+No macOS compatível, processe mídia em lotes pequenos:
 
 ```bash
 uv run python -m mind_collect.run --worker-midia --limite 3 --espera 60
 ```
 
-Em Windows e Linux a coleta de URLs, textos e metadados foi projetada para
-funcionar, mas ainda depende da primeira execução da matriz remota. O backend
-atual de transcrição/OCR não é portátil. Não anuncie enriquecimento multimodal
-nesses sistemas até existir e passar em testes um backend alternativo. Cada
-máquina também precisa configurar seu próprio `.env` e autenticar uma sessão
-própria do Telegram.
+Cada computador configura seu próprio `.env`, seu próprio `MIND_SALT` e sua
+própria sessão do Telegram. Nunca compartilhe arquivos `.session` ou cookies.
 
-## Uma máquina escritora
+## Coleta contínua
 
-Ainda não existe merge de dois bancos e duas filas de coleta. Portanto:
+Não há serviço em segundo plano instalado pelo repositório. Primeiro valide um
+ciclo manual. Depois, a máquina coletora pode agendar o mesmo comando com Task
+Scheduler, `launchd` ou systemd:
 
-- uma máquina é o coletor autoritativo;
-- os alunos baixam snapshots para análise;
-- somente o responsável publica uma nova versão oficial;
-- quem precisar coletar em outra máquina usa outro diretório e não mistura o
-  resultado manualmente no banco oficial;
-- uma coleta distribuída futura deve trocar pacotes delta por `doc_id`, com
-  merge testado e auditável.
+```bash
+uv run python -m mind_collect.run --ciclo --sem-transcricao
+```
 
-Agendadores de cada sistema podem chamar o mesmo comando de ciclo. O agendamento
-não é parte do snapshot: `launchd`, systemd e Task Scheduler ficam na máquina
-autoritativa e nunca guardam credenciais no repositório.
+Use somente uma máquina como escritora do corpus autoritativo. Ainda não existe
+merge seguro de dois bancos ou duas filas de coleta.
 
-## O que não foi feito
+## Backup local opcional
 
-- o corpus não foi publicado no GitHub público;
-- fontes pagas continuam fora do projeto;
-- não há backend portátil de Whisper/OCR em Windows e Linux;
-- não há merge de coletores concorrentes;
-- não há publicação aberta da mídia ou dos textos de terceiros;
-- as três execuções antigas sem término continuam registradas para auditoria;
-- o snapshot `full-private` não deve ser enviado antes de revisão de licença e
-  necessidade.
+`mind-data` também cria um snapshot verificável para backup local ou
+transferência manual autorizada. O resultado fica em `dist/`, que também está
+ignorado pelo Git.
 
-Detalhes de formato, segurança, versionamento e critérios de aceite estão em
+```bash
+uv run mind-data pack --profile team
+uv run mind-data verify dist/data/ARQUIVO.bundle.json
+```
+
+O perfil `team` inclui o backup consistente do SQLite, os JSONL canônicos, a
+exportação de perfis e miniaturas. Ele exclui mídia original, sessões,
+credenciais, cookies, logs, quarentena e arquivos parciais.
+
+Para restaurar um snapshot recebido por disco externo ou outro canal aprovado:
+
+```bash
+uv run mind-data restore CAMINHO/ARQUIVO.bundle.json
+```
+
+Se já houver dados, o comando interrompe sem apagar nada. Use `--replace`
+somente depois de conferir o backup que será preservado.
+
+## Licença e uso
+
+Conteúdo público não é automaticamente conteúdo livre para redistribuição. Na
+auditoria original, 160.878 documentos estavam marcados como `referencia` e
+apenas 40 como `livre`. O material de referência serve à análise interna e não
+entra em treino ou publicação aberta.
+
+O conteúdo do Reddit exige retenção mínima e retirada quando solicitada. Antes
+de publicar qualquer dataset, revise a licença de cada fonte e prefira IDs,
+URLs, hashes e scripts de reconstrução.
+
+## O que não está no Git
+
+- o corpus de 8,7 GiB da máquina original;
+- snapshots ou Releases com os dados coletados;
+- sessões, cookies ou credenciais;
+- mídia e textos de terceiros;
+- agendadores específicos de uma máquina;
+- merge de coletores concorrentes.
+
+Os contratos de formato, segurança e restauração local estão em
 [`SPEC.md`](SPEC.md).

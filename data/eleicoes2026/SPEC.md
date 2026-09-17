@@ -1,25 +1,21 @@
-# Especificação de distribuição do corpus eleitoral
+# Especificação de backup do corpus eleitoral
 
 ## Objetivo
 
-Permitir que a equipe baixe o mesmo estado do corpus, verifique sua integridade,
-restaure-o em Windows, macOS ou Linux e continue o trabalho sem versionar dados
-pesados ou segredos no repositório público do código.
+Definir como o corpus é construído e mantido localmente, além do formato de
+backup verificável, sem versionar dados pesados ou segredos no repositório
+público do código.
 
 ## Decisão de armazenamento
 
-O canal operacional é um repositório GitHub privado separado com snapshots em
-Releases. A escolha atende ao requisito de usar permissões de repositório e não
-adiciona serviço pago. Cada asset fica abaixo de 2 GiB e o publicador confirma a
-visibilidade `PRIVATE` antes do upload.
+O repositório público contém código, documentação, inventários de fontes e
+instruções de coleta. O corpus produzido fica em `data/eleicoes2026/` e é
+ignorado pelo Git, assim como os snapshots em `dist/`.
 
-Git LFS foi rejeitado: a franquia gratuita de armazenamento e tráfego fica
-praticamente esgotada por uma única cópia de 8,7 GiB, e cada nova versão de um
-arquivo volta a consumir espaço. Artifacts foram rejeitados por expiração. O
-Drive pessoal foi rejeitado por quota pequena e por incentivar o uso do SQLite
-vivo em pasta sincronizada. Hugging Face privado é uma alternativa futura para
-atualização incremental, mas exigiria uma segunda conta e outro modelo de
-permissão; não é necessário para a primeira entrega aos orientados.
+Não existe repositório separado de dados nem download automático de um corpus
+pronto. Cada máquina executa os coletores e mantém seu próprio estado local. Um
+snapshot pode ser criado para backup ou transferência manual autorizada, mas
+não é publicado pelo programa.
 
 ## Fonte de verdade
 
@@ -58,8 +54,8 @@ Arquivos extras só podem vir de `_midia`, `_tse` ou `_tse_abertos`; datasets
 externos reconstruíveis continuam fora. Shards canônicos são aceitos em seus
 diretórios de fonte. JSON de mídia precisa ter o contrato de cache de
 transcrição, e arquivos textuais com chaves ou assinaturas de credencial são
-excluídos. A publicação desse perfil exige o override explícito
-`--allow-full-private` depois de revisão de licença.
+excluídos. Esse perfil serve somente para recuperação local e exige revisão de
+licença antes de qualquer transferência manual.
 
 ## Exclusões obrigatórias
 
@@ -178,15 +174,15 @@ corpus. A leitura também aceita os dois formatos legados:
 `MIND_DATA_DIR` permite escolher outra raiz antes de iniciar o processo. URLs
 HTTP não são convertidas em caminhos locais.
 
-## Publicação e acesso
+## Limite público e transferência manual
 
-`mind-data publish` verifica o bundle e consulta a visibilidade pelo GitHub CLI.
-O upload é recusado se o destino não for `PRIVATE`. O comando usa uma tag única
-e a política da equipe proíbe substituir assets; correções geram outro snapshot.
+Nenhum bundle é publicado automaticamente. O Git recebe apenas `README.md` e
+`SPEC.md` dentro desta pasta; todos os demais caminhos continuam ignorados.
 
-`mind-data fetch` consulta novamente a visibilidade, baixa todos os assets da
-Release em diretório temporário e chama a mesma restauração local. O GitHub CLI
-é responsável pela autenticação em todos os sistemas.
+Quando houver necessidade de backup ou transferência autorizada, o responsável
+cria o bundle com `mind-data pack`, verifica com `mind-data verify` e move o
+índice e todas as partes por um canal escolhido fora do repositório. A máquina
+destinatária usa `mind-data restore`.
 
 ## Coleta depois da restauração
 
@@ -194,22 +190,21 @@ Existe um único escritor autoritativo. O snapshot preserva cursores e filas,
 portanto essa máquina pode retomar o ciclo. Não existe merge de bancos criados
 por vários alunos; essa capacidade fica fora desta versão.
 
-A coleta de rede foi projetada para ser portátil e possui uma matriz de CI para
-Windows, macOS e Linux, ainda pendente de primeira execução remota. Transcrição
-MLX e OCR Vision são opcionais e restritos ao macOS 14 ou mais novo com Apple
-Silicon. A ausência deles não impede baixar e analisar o snapshot nem executar
-o ciclo com `--sem-transcricao`.
+A coleta de rede foi projetada para ser portátil e a matriz de CI passou em
+Windows, macOS e Linux. Transcrição MLX e OCR Vision são opcionais e restritos
+ao macOS 14 ou mais novo com Apple Silicon. A ausência deles não impede
+executar o ciclo com `--sem-transcricao`.
 
 ## Critérios de aceite
 
 - a CLI base instala e abre sem extras de mídia;
 - `uv run mind-data status` audita o corpus a partir de qualquer diretório;
 - testes cobrem exclusões, backup com SQLite aberto, adulteração, path
-  traversal, restauração, backup anterior e bloqueio de repositório público;
+  traversal, restauração e preservação do backup anterior;
 - caminhos novos são relativos e caminhos antigos continuam legíveis;
 - o lock do worker funciona sem `fcntl` e não bloqueia Windows;
 - PDF temporário do TSE é fechado antes de `pdftotext`;
 - lint e suíte completa passam;
 - a CI executa instalação, CLIs, lint e testes em Windows, macOS e Linux;
-- um snapshot real `team` é criado e verificado antes da entrega;
+- um snapshot real `team` foi criado e verificado localmente antes da entrega;
 - nenhuma sessão, credencial, cookie ou dado bruto entra no Git.

@@ -17,7 +17,7 @@ submissão à FEBRACE 2027.
 | `CREDENCIAIS.md` | Matriz de fontes gratuitas, decisões de uso e como obter cada acesso |
 | `DADOS.md` | Corpora preexistentes em `data/`, reconstruídos por `scripts/get_data.py` |
 | `data/eleicoes2026/README.md` | Como baixar, verificar, restaurar e continuar o corpus eleitoral em qualquer sistema |
-| `data/eleicoes2026/SPEC.md` | Contrato técnico e de segurança da distribuição dos snapshots |
+| `data/eleicoes2026/SPEC.md` | Contrato técnico e de segurança dos backups locais |
 | `febrace/` | Material oficial da FEBRACE (local, fora do git) |
 
 Para decisões científicas, vale a `SPEC.md` da raiz. Para empacotamento e
@@ -46,17 +46,17 @@ segundo plano transcrição, imagens e keyframes/OCR. O TSE é apenas uma sement
 grafo também cresce por busca temática, notícias, checagens, links e perfis
 mencionados nas próprias publicações.
 
-## Corpus compartilhado
+## Dados eleitorais locais
 
-O repositório de código é público e não recebe o corpus. A equipe compartilha
-snapshots verificáveis por Releases de um repositório privado separado:
+O repositório público contém o código e as instruções para obter os dados, mas
+não contém o corpus produzido. `data/eleicoes2026/` fica ignorada pelo Git, com
+exceção do README e da especificação.
 
 ```bash
+uv run python -m mind_collect.run --ciclo --sem-transcricao
 uv run mind-data status
-uv run mind-data fetch --repository daviiabreu/MIND-data
 ```
 
-O repositório privado já existe; cada orientado ainda precisa ser adicionado
-como colaborador. Não publique os dados neste repositório público. O
-procedimento completo está em
+Cada máquina constrói seu corpus local a partir das fontes públicas e das
+credenciais gratuitas configuradas. O procedimento completo está em
 [`data/eleicoes2026/README.md`](data/eleicoes2026/README.md).

@@ -37,14 +37,13 @@ banco é de 4 de setembro de 2026; portanto o corpus está íntegro, mas a séri
 precisa ser retomada antes do congelamento científico.
 
 O arquivo `data/eleicoes2026/perfis_sociais.jsonl` é uma exportação de
-conveniência. Cada snapshot compartilhado o regenera a partir do banco para não
-distribuir uma versão defasada.
+conveniência. Cada snapshot local o regenera a partir do banco para não guardar
+uma versão defasada.
 
-O snapshot privado `eleicoes2026-20260916T003307Z-team` está publicado em
-`daviiabreu/MIND-data`. O fluxo remoto foi testado: download, hashes,
-restauração e `quick_check` devolveram 32.190 arquivos e 160.918 documentos. Os
-orientados precisam ser adicionados como colaboradores de leitura antes do
-download.
+O corpus produzido existe somente na máquina coletora e está ignorado pelo Git.
+O repositório público contém os coletores, a documentação e os comandos para
+cada orientado construir seu próprio corpus local. Snapshots em `dist/` também
+são locais e servem apenas para backup ou transferência manual autorizada.
 
 ## 2. Decisão de escopo
 
@@ -262,6 +261,6 @@ Ao retomar:
 2. executar `--credenciais` sem copiar valores para a saída;
 3. confirmar qual máquina é o único coletor autoritativo;
 4. executar um ciclo manual e acompanhar o backlog com `--list`;
-5. criar e verificar um snapshot `team` antes de compartilhar;
+5. criar e verificar um snapshot `team` antes de um backup importante;
 6. medir cobertura por plataforma, ator, partido, estado, tempo e modalidade,
    não apenas pelo total bruto.

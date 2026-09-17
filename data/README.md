@@ -20,11 +20,10 @@ transcrições, OCR e metadados da coleta eleitoral. Como quase todo o conteúdo
 está classificado para uso de referência, ele não pode ser publicado junto com
 este repositório público.
 
-O guia completo para baixar, verificar, restaurar, atualizar e compartilhar o
-corpus está em [`data/eleicoes2026/README.md`](eleicoes2026/README.md). O
-contrato técnico dos snapshots está em
+O guia completo para baixar das fontes, coletar, atualizar e fazer backup local
+está em [`data/eleicoes2026/README.md`](eleicoes2026/README.md). O contrato
+técnico dos snapshots locais está em
 [`data/eleicoes2026/SPEC.md`](eleicoes2026/SPEC.md).
 
-Nunca copie a pasta inteira com `zip`, `tar`, Drive ou Dropbox. Ela contém
-estado vivo do SQLite e pode conter sessão autenticada, arquivos parciais e
-travas. Use sempre `uv run mind-data pack`.
+Nunca force a inclusão da pasta no Git. Para backup ou transferência manual,
+não copie o SQLite enquanto está ativo: use `uv run mind-data pack`.
