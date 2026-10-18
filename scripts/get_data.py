@@ -157,11 +157,11 @@ def extrair(nomes, ler, destino, so, tirar):
     corte = prefixo_comum(nomes)
     n = 0
     for nome in nomes:
-        rel = nome[len(corte):] if corte and nome.startswith(corte) else nome
+        rel = nome[len(corte) :] if corte and nome.startswith(corte) else nome
         if not rel or not seguro(rel) or not escolhido(rel, so):
             continue
         if tirar and rel.startswith(tirar):
-            rel = rel[len(tirar):]
+            rel = rel[len(tirar) :]
             if not rel:
                 continue
         dados = ler(nome)
@@ -204,7 +204,7 @@ def baixar(url, caminho):
     def progresso(blocos, tam_bloco, total):
         if total > 0:
             pct = min(100, blocos * tam_bloco * 100 // total)
-            sys.stdout.write("\r    baixando... %3d%% de %.0f MB" % (pct, total / 1e6))
+            sys.stdout.write(f"\r    baixando... {pct:3d}% de {total / 1e6:.0f} MB")
             sys.stdout.flush()
 
     urllib.request.urlretrieve(url, caminho, reporthook=progresso)
@@ -217,10 +217,10 @@ def pegar(base, refazer=False):
     esperado = os.path.join(destino, base["achar"])
 
     if os.path.exists(esperado) and not refazer:
-        print("  ok       %s (já baixado)" % key)
+        print(f"  ok       {key} (já baixado)")
         return True
 
-    print("  baixando %s — %s" % (key, base["tam"]))
+    print(f"  baixando {key} — {base['tam']}")
     if refazer and os.path.isdir(destino):
         shutil.rmtree(destino)
     os.makedirs(destino, exist_ok=True)
@@ -235,21 +235,20 @@ def pegar(base, refazer=False):
         else:
             n = descompactar(arquivo, destino, base.get("só"), base.get("tirar"))
     except (urllib.error.URLError, OSError) as erro:
-        print("  ERRO     %s — não deu para baixar: %s" % (key, erro))
+        print(f"  ERRO     {key} — não deu para baixar: {erro}")
         return False
     except (tarfile.TarError, zipfile.BadZipFile) as erro:
-        print("  ERRO     %s — arquivo veio corrompido: %s" % (key, erro))
+        print(f"  ERRO     {key} — arquivo veio corrompido: {erro}")
         return False
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
     if not os.path.exists(esperado):
-        print("  ERRO     %s — extraiu %d arquivos, mas '%s' não apareceu."
-              % (key, n, base["achar"]))
+        print(f"  ERRO     {key} — extraiu {n} arquivos, mas '{base['achar']}' não apareceu.")
         print("           O repositório de origem deve ter mudado de estrutura.")
         return False
 
-    print("  ok       %s — %d arquivos em data/%s/" % (key, n, key))
+    print(f"  ok       {key} — {n} arquivos em data/{key}/")
     return True
 
 
@@ -258,8 +257,8 @@ def listar():
     for b in BASES:
         tem = os.path.exists(os.path.join(DATA, b["key"], b["achar"]))
         extra = "  (pesada, baixe com --only)" if b.get("extra") else ""
-        print("  %s %-22s %-9s %s%s"
-              % ("✓" if tem else " ", b["key"], b["tam"], b["oque"], extra))
+        marca = "✓" if tem else " "
+        print(f"  {marca} {b['key']:<22} {b['tam']:<9} {b['oque']}{extra}")
     print("\n  ✓ = já está em data/")
     print("\nO SemEval-2023 (a melhor base para o projeto) exige cadastro e não")
     print("entra aqui. O passo a passo está em DADOS.md.\n")
@@ -277,8 +276,10 @@ def autoteste():
     try:
         origem = os.path.join(tmp, "repo-main", "dataset")
         os.makedirs(origem)
-        open(os.path.join(origem, "d.tsv"), "w").write("ok")
-        open(os.path.join(tmp, "repo-main", "pular.txt"), "w").write("nao")
+        with open(os.path.join(origem, "d.tsv"), "w") as arquivo:
+            arquivo.write("ok")
+        with open(os.path.join(tmp, "repo-main", "pular.txt"), "w") as arquivo:
+            arquivo.write("nao")
         arq = os.path.join(tmp, "a.tgz")
         with tarfile.open(arq, "w:gz") as tf:
             tf.add(os.path.join(tmp, "repo-main"), arcname="repo-main")
@@ -288,7 +289,8 @@ def autoteste():
 
         saida = os.path.join(tmp, "out")
         assert descompactar(arq, saida, ["dataset/"], None) == 1
-        assert open(os.path.join(saida, "dataset", "d.tsv")).read() == "ok"
+        with open(os.path.join(saida, "dataset", "d.tsv")) as arquivo:
+            assert arquivo.read() == "ok"
         assert not os.path.exists(os.path.join(saida, "pular.txt"))
         assert not os.path.exists(os.path.join(tmp, "invasor.txt"))
 
@@ -318,18 +320,18 @@ def main():
         for k in args.only:
             achou = next((b for b in BASES if b["key"] == k), None)
             if achou is None:
-                print("não conheço a base '%s'. Use --list para ver as opções." % k)
+                print(f"não conheço a base '{k}'. Use --list para ver as opções.")
                 return 2
             escolhidas.append(achou)
     else:
         escolhidas = [b for b in BASES if not b.get("extra")]
 
     os.makedirs(DATA, exist_ok=True)
-    print("\nBaixando %d base(s) para data/\n" % len(escolhidas))
+    print(f"\nBaixando {len(escolhidas)} base(s) para data/\n")
     falhou = [b["key"] for b in escolhidas if not pegar(b, args.force)]
 
     if falhou:
-        print("\nNão deu certo: %s" % ", ".join(falhou))
+        print(f"\nNão deu certo: {', '.join(falhou)}")
         print("Rode de novo — o script pula o que já baixou.")
         return 1
     print("\nPronto. O que é cada base está em DADOS.md.")

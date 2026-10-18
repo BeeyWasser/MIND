@@ -1,6 +1,14 @@
 # Dados brutos — reconstruídos com scripts/get_data.py, nunca versionados.
 /data/*
 !/data/.gitkeep
+!/data/README.md
+!/data/eleicoes2026/
+/data/eleicoes2026/*
+!/data/eleicoes2026/README.md
+!/data/eleicoes2026/SPEC.md
+
+# Snapshots locais; nunca são versionados nem publicados automaticamente.
+/dist/
 
 # Python
 __pycache__/
@@ -21,3 +29,17 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# FEBRACE — material de inscrição (local, não versionado)
+/febrace/
+
+# uv
+.venv/
+
+# Credenciais
+.env
+/.local-state/
+
+# Sessão do Telethon — contém credencial de sessão
+*.session
+*.session-journal

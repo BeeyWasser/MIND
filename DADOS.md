@@ -6,6 +6,10 @@ Os dados não ficam no repositório, são pesados demais. Para baixar:
 python3 scripts/get_data.py
 ```
 
+Este arquivo trata das bases acadêmicas reconstruíveis. O corpus coletado para
+as eleições de 2026 tem regras de licença e distribuição diferentes; consulte
+[`data/eleicoes2026/README.md`](data/eleicoes2026/README.md).
+
 Não precisa instalar nada além do Python. Leva uns 10 minutos e ocupa 470 MB.
 Se cair a internet no meio, roda de novo, ele pula o que já baixou.
 
