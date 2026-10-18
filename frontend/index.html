@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="description"
+        content="MIND — Ferramenta baseada em inteligência artificial para identificar estratégias de manipulação cognitiva em conteúdos digitais."
+    >
+
+    <title>MIND — Manipulation Identification and Narrative Detector</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <script src="script.js" defer></script>
+</head>
+
+<body>
+
+    <!-- Cabeçalho -->
+    <header class="header">
+        <nav class="navbar" aria-label="Navegação principal">
+
+            <a href="#inicio" class="logo" aria-label="MIND - Página inicial">
+                <span class="logo-symbol" aria-hidden="true">✳</span>
+                <span>MIND</span>
+            </a>
+
+            <div class="nav-links">
+                <a href="#inicio">Início</a>
+                <a href="#analise">Analisar conteúdo</a>
+                <a href="#sobre">Sobre o projeto</a>
+            </div>
+
+            <a href="#analise" class="nav-button">
+                Experimentar <span aria-hidden="true">↗</span>
+            </a>
+
+        </nav>
+    </header>
+
+
+    <!-- Conteúdo principal -->
+    <main>
+
+        <!-- Apresentação -->
+        <section class="hero" id="inicio">
+
+            <div class="hero-content">
+
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    Ferramenta de análise textual baseada em IA
+                </div>
+
+                <h1>
+                    Nem toda mensagem é
+                    <span class="gradient-text">o que parece.</span>
+                </h1>
+
+                <p class="hero-description">
+                    Explore os mecanismos por trás dos conteúdos digitais.
+                    O MIND utiliza inteligência artificial para identificar
+                    possíveis estratégias de manipulação cognitiva em textos.
+                </p>
+
+                <a href="#analise" class="primary-button">
+                    Começar análise
+                    <span aria-hidden="true">↓</span>
+                </a>
+
+                <div class="hero-caption">
+                    Manipulation Identification and Narrative Detector
+                </div>
+
+            </div>
+
+            <div class="ambient-glow" aria-hidden="true"></div>
+
+        </section>
+
+
+        <!-- Área de análise -->
+        <section class="analysis-section" id="analise">
+
+            <div class="section-heading">
+
+                <span class="eyebrow">ANÁLISE DE CONTEÚDO</span>
+
+                <h2>
+                    Investigue o que está por trás
+                    <br class="desktop-break">
+                    das palavras.
+                </h2>
+
+                <p>
+                    Insira um texto para investigar possíveis estratégias
+                    de manipulação cognitiva.
+                </p>
+
+            </div>
+
+
+            <div class="analysis-card">
+
+                <div class="card-header">
+
+                    <div class="card-title">
+                        <span class="card-icon" aria-hidden="true">✳</span>
+
+                        <div>
+                            <h3>Novo diagnóstico</h3>
+                            <p>Análise de conteúdo textual</p>
+                        </div>
+                    </div>
+
+                    <span class="language-tag">Português</span>
+
+                </div>
+
+
+                <form id="analysis-form">
+
+                    <label for="content-input" class="input-label">
+                        Conteúdo para análise
+                    </label>
+
+                    <textarea
+                        id="content-input"
+                        name="content"
+                        placeholder="Cole aqui o texto que você deseja analisar..."
+                        maxlength="10000"
+                        required
+                    ></textarea>
+
+                    <div class="input-footer">
+
+                        <span id="character-count" aria-live="polite">
+                            0 / 10.000 caracteres
+                        </span>
+
+                        <span class="input-hint">
+                            Não inclua informações pessoais.
+                        </span>
+
+                    </div>
+
+                    <div class="form-actions">
+
+                        <p class="disclaimer">
+                            A análise é automatizada e pode apresentar erros.
+                        </p>
+
+                        <button
+                            type="submit"
+                            class="analyze-button"
+                            id="analyze-button"
+                        >
+                            Analisar conteúdo
+                            <span aria-hidden="true">→</span>
+                        </button>
+
+                    </div>
+
+                </form>
+
+
+                <!-- Área reservada para os resultados -->
+                <div
+                    class="result-area"
+                    id="result-area"
+                    aria-live="polite"
+                    hidden
+                >
+                    <div class="result-divider"></div>
+
+                    <span class="eyebrow">RESULTADO DA ANÁLISE</span>
+
+                    <h3 id="result-title">Resultado</h3>
+
+                    <div id="result-content"></div>
+                </div>
+
+            </div>
+
+            <p class="privacy-note">
+                <span aria-hidden="true">◇</span>
+                Seus textos devem ser utilizados de forma responsável.
+                Evite inserir dados pessoais ou informações confidenciais.
+            </p>
+
+        </section>
+
+
+        <!-- Apresentação resumida do projeto -->
+        <section class="about-section" id="sobre">
+
+            <span class="eyebrow">SOBRE O MIND</span>
+
+            <h2>
+                Tecnologia para compreender
+                <span class="gradient-text">a comunicação digital.</span>
+            </h2>
+
+            <p>
+                O MIND é um projeto de pesquisa que investiga o uso da
+                inteligência artificial na identificação de estratégias
+                de manipulação cognitiva em conteúdos digitais.
+            </p>
+
+        </section>
+
+    </main>
+
+
+    <!-- Rodapé -->
+    <footer class="footer">
+
+        <a href="#inicio" class="logo footer-logo">
+            <span class="logo-symbol" aria-hidden="true">✳</span>
+            <span>MIND</span>
+        </a>
+
+        <p>
+            Manipulation Identification and Narrative Detector
+        </p>
+
+        <a href="#inicio" class="back-to-top">
+            Voltar ao início ↑
+        </a>
+
+    </footer>
+
+</body>
+</html>
